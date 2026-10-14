@@ -4,6 +4,10 @@ Sends images from the built-in **Save Image** node to a PureRef board. No extra 
 
 Windows only. Tested with PureRef 2.1.3.
 
+[![Watch the PureRef Connector demo](assets/pureref-connector-demo.jpg)](https://github.com/doubletwisted/ComfyUI-PureRef-Connector/blob/main/assets/pureref-connector-demo.mp4)
+
+[Watch the 32-second demo](https://github.com/doubletwisted/ComfyUI-PureRef-Connector/blob/main/assets/pureref-connector-demo.mp4)
+
 ## Install
 
 Install **PureRef Connector** from ComfyUI-Manager, or clone this repo into `ComfyUI/custom_nodes`.
