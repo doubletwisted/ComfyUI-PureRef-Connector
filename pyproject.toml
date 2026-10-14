@@ -1,0 +1,20 @@
+[project]
+name = "pureref-connector"
+version = "1.0.0"
+description = "Send Save Image outputs to an editable PureRef board without adding nodes. Windows only."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Dominik Bargiel" }]
+requires-python = ">=3.10"
+dependencies = []
+classifiers = ["Operating System :: Microsoft :: Windows"]
+
+[project.urls]
+Repository = "https://github.com/doubletwisted/ComfyUI-PureRef-Connector"
+Issues = "https://github.com/doubletwisted/ComfyUI-PureRef-Connector/issues"
+
+[tool.comfy]
+PublisherId = "doubletwisted"
+DisplayName = "PureRef Connector"
+Icon = ""
+requires-comfyui = ">=0.3.76"
