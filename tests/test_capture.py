@@ -150,6 +150,13 @@ class CaptureTests(unittest.TestCase):
             positions.extend(self.controller.board.add.call_args.args[1])
         self.assertEqual(positions, [(128, 128), (448, 128), (768, 128), (1088, 128), (1408, 128), (1728, 128), (128, 448)])
 
+    def test_new_document_restarts_the_grid(self):
+        self.save()
+        self.assertTrue(self.controller.slots().exists())
+        self.controller.validate_executable = Mock()
+        self.connector_module.Connector.launch(self.controller)
+        self.assertFalse(self.controller.slots().exists())
+
     def test_mixed_sizes_use_the_tallest_image_for_the_next_row(self):
         self.controller.settings["images_per_row"] = 2
         self.images.shape = (1, 512, 256, 3)

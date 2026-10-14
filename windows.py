@@ -16,8 +16,8 @@ class PureRefError(RuntimeError):
     pass
 
 
-u = ctypes.WinDLL("user32", use_last_error=True)
-k = ctypes.WinDLL("kernel32", use_last_error=True)
+user32 = ctypes.WinDLL("user32", use_last_error=True)
+kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
 WM_KEYDOWN, WM_KEYUP = 0x100, 0x101
 VK_SHIFT, VK_CONTROL, VK_ESCAPE = 0x10, 0x11, 0x1b
@@ -33,27 +33,27 @@ def bind(dll, name, result, *args):
 
 
 enum_callback = ctypes.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
-bind(u, "EnumWindows", w.BOOL, enum_callback, w.LPARAM)
-bind(u, "GetWindowThreadProcessId", w.DWORD, w.HWND, ctypes.POINTER(w.DWORD))
-bind(u, "GetWindowTextW", ctypes.c_int, w.HWND, w.LPWSTR, ctypes.c_int)
-bind(u, "IsWindowVisible", w.BOOL, w.HWND)
-bind(u, "IsWindow", w.BOOL, w.HWND)
-bind(u, "IsWindowEnabled", w.BOOL, w.HWND)
-bind(u, "EnableWindow", w.BOOL, w.HWND, w.BOOL)
-bind(u, "AttachThreadInput", w.BOOL, w.DWORD, w.DWORD, w.BOOL)
-bind(u, "PeekMessageW", w.BOOL, ctypes.POINTER(w.MSG), w.HWND, w.UINT, w.UINT, w.UINT)
-bind(u, "SendMessageTimeoutW", w.LPARAM, w.HWND, w.UINT, w.WPARAM, w.LPARAM, w.UINT, w.UINT, ctypes.POINTER(ctypes.c_size_t))
-bind(u, "GetKeyboardState", w.BOOL, ctypes.POINTER(ctypes.c_ubyte))
-bind(u, "SetKeyboardState", w.BOOL, ctypes.POINTER(ctypes.c_ubyte))
-bind(u, "MapVirtualKeyW", w.UINT, w.UINT, w.UINT)
-bind(u, "CreateDesktopW", w.HANDLE, w.LPCWSTR, w.LPCWSTR, ctypes.c_void_p, w.DWORD, w.DWORD, ctypes.c_void_p)
-bind(u, "CloseDesktop", w.BOOL, w.HANDLE)
-bind(k, "GetCurrentThreadId", w.DWORD)
+bind(user32, "EnumWindows", w.BOOL, enum_callback, w.LPARAM)
+bind(user32, "GetWindowThreadProcessId", w.DWORD, w.HWND, ctypes.POINTER(w.DWORD))
+bind(user32, "GetWindowTextW", ctypes.c_int, w.HWND, w.LPWSTR, ctypes.c_int)
+bind(user32, "IsWindowVisible", w.BOOL, w.HWND)
+bind(user32, "IsWindow", w.BOOL, w.HWND)
+bind(user32, "IsWindowEnabled", w.BOOL, w.HWND)
+bind(user32, "EnableWindow", w.BOOL, w.HWND, w.BOOL)
+bind(user32, "AttachThreadInput", w.BOOL, w.DWORD, w.DWORD, w.BOOL)
+bind(user32, "PeekMessageW", w.BOOL, ctypes.POINTER(w.MSG), w.HWND, w.UINT, w.UINT, w.UINT)
+bind(user32, "SendMessageTimeoutW", w.LPARAM, w.HWND, w.UINT, w.WPARAM, w.LPARAM, w.UINT, w.UINT, ctypes.POINTER(ctypes.c_size_t))
+bind(user32, "GetKeyboardState", w.BOOL, ctypes.POINTER(ctypes.c_ubyte))
+bind(user32, "SetKeyboardState", w.BOOL, ctypes.POINTER(ctypes.c_ubyte))
+bind(user32, "MapVirtualKeyW", w.UINT, w.UINT, w.UINT)
+bind(user32, "CreateDesktopW", w.HANDLE, w.LPCWSTR, w.LPCWSTR, ctypes.c_void_p, w.DWORD, w.DWORD, ctypes.c_void_p)
+bind(user32, "CloseDesktop", w.BOOL, w.HANDLE)
+bind(kernel32, "GetCurrentThreadId", w.DWORD)
 
 
 def title(hwnd):
     text = ctypes.create_unicode_buffer(2048)
-    u.GetWindowTextW(hwnd, text, len(text))
+    user32.GetWindowTextW(hwnd, text, len(text))
     return text.value
 
 
@@ -66,13 +66,13 @@ def windows():
 
     @enum_callback
     def collect(hwnd, _):
-        if u.IsWindowVisible(hwnd):
+        if user32.IsWindowVisible(hwnd):
             pid = w.DWORD()
-            u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
             found.append((hwnd, pid.value, title(hwnd)))
         return True
 
-    u.EnumWindows(collect, 0)
+    user32.EnumWindows(collect, 0)
     return found
 
 
@@ -105,10 +105,10 @@ class Board:
     def alive(self):
         if self.process is not None and self.process.poll() is not None:
             return False
-        if self.hwnd is None or not u.IsWindow(self.hwnd):
+        if self.hwnd is None or not user32.IsWindow(self.hwnd):
             return False
         pid = w.DWORD()
-        u.GetWindowThreadProcessId(self.hwnd, ctypes.byref(pid))
+        user32.GetWindowThreadProcessId(self.hwnd, ctypes.byref(pid))
         return pid.value == self.pid
 
     def profile(self, name):
@@ -153,26 +153,26 @@ class Board:
     def ready(self):
         if not self.alive() or not matches_document(title(self.hwnd), self.document):
             raise PureRefError("The connector's board was closed or changed.")
-        if not self.updating and not u.IsWindowEnabled(self.hwnd):
+        if not self.updating and not user32.IsWindowEnabled(self.hwnd):
             raise PureRefError("Finish the open PureRef dialog.")
         if any(hwnd != self.hwnd and matches_document(caption, self.document) for hwnd, _, caption in windows()):
             raise PureRefError("Close the other window using this board.")
 
     def message(self, msg, a=0, b=0):
         result = ctypes.c_size_t()
-        if not u.SendMessageTimeoutW(self.hwnd, msg, a, b, 2, 2000, ctypes.byref(result)):
+        if not user32.SendMessageTimeoutW(self.hwnd, msg, a, b, 2, 2000, ctypes.byref(result)):
             raise PureRefError("PureRef is busy.")
 
     def key(self, vk, shift=False, control=True):
-        thread = u.GetWindowThreadProcessId(self.hwnd, None)
-        current = k.GetCurrentThreadId()
+        thread = user32.GetWindowThreadProcessId(self.hwnd, None)
+        current = kernel32.GetCurrentThreadId()
         # ComfyUI's worker thread may not have a Windows message queue yet.
         message = w.MSG()
-        u.PeekMessageW(ctypes.byref(message), None, 0, 0, 0)
-        if not u.AttachThreadInput(current, thread, True):
+        user32.PeekMessageW(ctypes.byref(message), None, 0, 0, 0)
+        if not user32.AttachThreadInput(current, thread, True):
             raise PureRefError("Cannot save the PureRef window.")
         state = (ctypes.c_ubyte * 256)()
-        u.GetKeyboardState(state)
+        user32.GetKeyboardState(state)
         previous = bytes(state)
         try:
             for modifier in MODIFIERS:
@@ -181,29 +181,29 @@ class Board:
                 state[VK_CONTROL] = state[0xa2] = 128
             if shift:
                 state[VK_SHIFT] = state[0xa0] = 128
-            u.SetKeyboardState(state)
+            user32.SetKeyboardState(state)
             if control:
-                self.message(WM_KEYDOWN, VK_CONTROL, 1 | (u.MapVirtualKeyW(VK_CONTROL, 0) << 16))
+                self.message(WM_KEYDOWN, VK_CONTROL, 1 | (user32.MapVirtualKeyW(VK_CONTROL, 0) << 16))
             if shift:
-                self.message(WM_KEYDOWN, VK_SHIFT, 1 | (u.MapVirtualKeyW(VK_SHIFT, 0) << 16))
-            self.message(WM_KEYDOWN, vk, 1 | (u.MapVirtualKeyW(vk, 0) << 16))
+                self.message(WM_KEYDOWN, VK_SHIFT, 1 | (user32.MapVirtualKeyW(VK_SHIFT, 0) << 16))
+            self.message(WM_KEYDOWN, vk, 1 | (user32.MapVirtualKeyW(vk, 0) << 16))
         finally:
             try:
                 try:
-                    self.message(WM_KEYUP, vk, 0xc0000001 | (u.MapVirtualKeyW(vk, 0) << 16))
+                    self.message(WM_KEYUP, vk, 0xc0000001 | (user32.MapVirtualKeyW(vk, 0) << 16))
                 except PureRefError:
                     pass
                 for modifier in MODIFIERS:
                     state[modifier] = 0
-                u.SetKeyboardState(state)
+                user32.SetKeyboardState(state)
                 for modifier in ((VK_SHIFT,) if shift else ()) + ((VK_CONTROL,) if control else ()):
                     try:
-                        self.message(WM_KEYUP, modifier, 0xc0000001 | (u.MapVirtualKeyW(modifier, 0) << 16))
+                        self.message(WM_KEYUP, modifier, 0xc0000001 | (user32.MapVirtualKeyW(modifier, 0) << 16))
                     except PureRefError:
                         pass
             finally:
-                u.SetKeyboardState((ctypes.c_ubyte * 256).from_buffer_copy(previous))
-                u.AttachThreadInput(current, thread, False)
+                user32.SetKeyboardState((ctypes.c_ubyte * 256).from_buffer_copy(previous))
+                user32.AttachThreadInput(current, thread, False)
 
     def save(self):
         self.ready()
@@ -235,7 +235,7 @@ class Board:
 
     def run_cli(self, commands):
         desktop_name = "PureRefCLI-" + uuid.uuid4().hex
-        desktop = u.CreateDesktopW(desktop_name, None, None, 0, 0x1ff, None)
+        desktop = user32.CreateDesktopW(desktop_name, None, None, 0, 0x1ff, None)
         if not desktop:
             raise PureRefError("Cannot start the background PureRef update.")
         startup = subprocess.STARTUPINFO()
@@ -258,7 +258,7 @@ class Board:
                         break
                 raise PureRefError(f"PureRef CLI update failed: {reason}")
         finally:
-            u.CloseDesktop(desktop)
+            user32.CloseDesktop(desktop)
 
     def add(self, files, positions):
         self.save()
@@ -275,7 +275,7 @@ class Board:
             shutil.copyfile(document, backup)
             # Pause editing during the short save/update/reload transaction.
             self.updating = True
-            u.EnableWindow(self.hwnd, False)
+            user32.EnableWindow(self.hwnd, False)
             try:
                 if not self.alive() or "*" in title(self.hwnd) or document.stat().st_mtime_ns != stamp:
                     raise PureRefError("The board changed during the update.")
@@ -297,8 +297,8 @@ class Board:
                     restored = True
                 raise
             finally:
-                if u.IsWindow(self.hwnd):
-                    u.EnableWindow(self.hwnd, True)
+                if user32.IsWindow(self.hwnd):
+                    user32.EnableWindow(self.hwnd, True)
                 self.updating = False
         finally:
             if restored:

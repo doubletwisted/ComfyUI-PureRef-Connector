@@ -104,6 +104,8 @@ class Connector:
             raise ValueError("Choose a PureRef document first.")
         if self.board is None:
             self.board = Board(self.directory / "native")
+        if not Path(self.settings["document"]).exists():
+            self.slots().unlink(missing_ok=True)
         self.board.open(self.settings["executable"], self.settings["document"])
         self.was_open = True
 
@@ -115,9 +117,12 @@ class Connector:
             self.notify()
             return self.snapshot()
 
-    def reserve(self, count, width, height):
+    def slots(self):
         digest = hashlib.sha256(self.settings["document"].casefold().encode("utf-8")).hexdigest()[:20]
-        path = self.directory / (digest + ".json")
+        return self.directory / (digest + ".json")
+
+    def reserve(self, count, width, height):
+        path = self.slots()
         layout = {"next_row": 0, "next_x": 0, "column": 0, "row_height": 0}
         if path.exists():
             layout.update(json.loads(path.read_text(encoding="utf-8")))

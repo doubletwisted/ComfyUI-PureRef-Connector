@@ -20,7 +20,7 @@ class NativeTests(unittest.TestCase):
         self.user32 = Mock()
         self.user32.GetWindowThreadProcessId.return_value = 99
         self.user32.MapVirtualKeyW.return_value = 0
-        for name, value in (("u", self.user32), ("k", Mock())):
+        for name, value in (("user32", self.user32), ("kernel32", Mock())):
             replacement = patch.object(native, name, value)
             replacement.start()
             self.addCleanup(replacement.stop)
